@@ -30,7 +30,7 @@ There are several cards that are played in some versions on MonoG Tron that are 
 It would be possible to update the spreadsheet to take one or both of these cards into account.
 
 #### Which Hands?
-The spreadsheet shows every combination of cards that can lead to a unique lines of play. For example, we don't distinguish `Tron XY + Map` from `Tron XY + Map + Chromatic`, because one would play the same regardless of the Chromatic.
+The spreadsheet shows every combination of cards that can lead to a unique lines of play. For example, we don't distinguish `Tron XY + Map` from `Tron XY + Map + Chromatic`, because the extra Chromatic doesn't effect the line of play the player would take.
 
 ### How are the Probabilities Calculated?
 #### Methods
@@ -50,12 +50,16 @@ For the data currently in the spreadsheet, opening hands were simulated with 100
 #### Chance to Draw a Hand
 The events of drawing each of the hands are not mutually exclusive, so we will use a simulation. The order of preference for the hands is by chance to have turn 3 tron (described further below).
 
+It's important to note that the chance to draw a hand is not the chance to have a hand that contains those cards, it's the chance to have a hand that contains those cards and doesn't also contain the cards for a better hand. This is necessary to allow the hand to fully describe what lines of play are possible.
+
 One thing that is interesting to note is that, thanks to the London Mulligan rule, the chance of drawing a particular hand is not effected by the number of mulligans that have been taken, so long as you are allowed to keep enough cards in hand.
 
 #### Chance to Improve hand after N mulligans
 The chance to improve your hand after one mulligan is straightforward: it is the sum of the probability to draw any of the hands that have a better chance at hitting turn 3 Tron.
 
 The chance of improving your hand after N mulligans is more accurately the chance that if you are willing to mulligan N times and stop whenever you draw a better hand, that you will succeed. Because the chances of improving your hand from your original is independent for each mulligan, the chance of improving your hand with `N` mulligans with a chance to improve it with one mulligan of `P` is `1 - (1 - P)^N`.
+
+This becomes somewhat inaccurate after 2 mulligans, because there are hands that require 5 cards, which obviously are impossible to draw. The difference from the number on the sheet is pretty small for 3 mulligans, because there's only a single 5 card hand, `Tron XY + Chromatic + Chromatic + Stirrings`, which has a similar chance to have turn 3 Tron as `Tron XY + Chromatic + Stirrings`. For 4 mulligans, this is more probamatic, because there are a lot of 4 card hands. Calculating the chances to have these hands would require running the simulation again for different hand sizes.
 
 #### Chance to have Turn 3 Tron
 Some hands have guaranteed turn 3 tron, but most will have to draw into it. In order to find the chance of turn 3 tron for a given starting hand. Whenever the player draws a card that could effect their play, we calculate the chance of each set of cards that would lead to a different line of play.
@@ -69,6 +73,11 @@ Every box is labeled with the number of cards left in the deck after the plays l
 The final box for every branch either is guaranteed to have turn 3 tron, or lists the final draws or cards looked at (from Ancient Stirrings) after every decision is made by the player and the chance to find the missing tron piece in the cards seen here.
 
 Based on this tree, we can determine the total chance to have turn 3 tron.
+
+#### Other Considerations
+Some of the lines of play included are debatable from a strategy perspective, but optimize the chances of turn 3 tron. For example, with 2 Chromatics in hand, a player might not crack the second Chromatic on turn 2 when they would be unable to play a Sylvan Scrying if they drew it. Luckily, this doesn't effect the results too much because the chance of the extra card finding the tron land is low, so you can mostly choose not to take these questionable lines and the probabilities will still be roughly correct. Further, since the entire calculation for the probabilities are in the spreadsheet, it's easy to update that line of play.
+
+The probabilities to have turn 3 tron are the chance on a 7 card hand. The chance is slightly higher after one or mulligans, because the cards sent to the bottom are guaranteed to be "blanks", so effectively all future draws are out of a smaller library. There's a couple ways this could be resolved, either by 
 
 ### Frequently Asked Questions
 Your questions here!
