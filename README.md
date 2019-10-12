@@ -1,5 +1,5 @@
 ## Overview
-The Mono-Green Tron deck prioritizes being able to play turn three Tron above almost all else. To faciltate this, it plays a lot of ways to find lands. Players of the deck often wonder how likely it is they will be able to find turn 3 Tron. This spreadsheet shows those probabilities.
+The Mono-Green Tron deck prioritizes being able to play turn three Tron above almost all else. To faciltate this, it plays a lot of ways to find lands. Players of the deck often wonder how likely it is they will be able to find turn 3 Tron. [The linked spreadsheet](https://docs.google.com/spreadsheets/d/1JImt0zkLeBXdWJi9_AiS9IxoUqZeljkZhHpeVQ_5qIU/edit?usp=sharing "The linked spreadsheet") shows those probabilities.
 
 ### Goals
 The two things that need to be determined for this spreadsheet are
@@ -36,7 +36,7 @@ The spreadsheet shows every combination of cards that can lead to a unique lines
 #### Methods
 There are two different ways we can determine the probability of an event. We can calculate it exactly, in many cases by using the [hypergeometric distribution](https://en.wikipedia.org/wiki/Hypergeometric_distribution "hypergeometric distribution"). In the case we're drawing or looking at more than one card, we are looking at the chance to draw one or more copies of the relevant card. On this [calculator](https://stattrek.com/online-calculator/hypergeometric.aspx "calculator"), this is the `Cumulative Probability: P(X > 1)`.
 
-We can also simulate the random variables (in this case, the drawing of cards) and measure how often the event occurs. This is called a [Monte Carlo Simulation](https://en.wikipedia.org/wiki/Monte_Carlo_method "Monte Carlo Expirement"). This repository contains the code for running these simulations.
+We can also simulate the random variables (in this case, the drawing of cards) and measure how often the event occurs. This is called a [Monte Carlo Experiment](https://en.wikipedia.org/wiki/Monte_Carlo_method "Monte Carlo Experiment"). This repository contains the code for running these simulations.
 
 It's more straightforward to use the hypogeometric distribution, but it can only be used in certain circumstances: when the events being measured are mutually exclusive. In other cases, we will use simulations.
 
@@ -58,7 +58,7 @@ The chance of improving your hand after N mulligans is more accurately the chanc
 #### Chance to have Turn 3 Tron
 Some hands have guaranteed turn 3 tron, but most will have to draw into it. In order to find the chance of turn 3 tron for a given starting hand. Whenever the player draws a card that could effect their play, we calculate the chance of each set of cards that would lead to a different line of play.
 
-Occasionally, multiple cards will be drawn in a row such that there's no reason to change decisions after the first card is drawn. For example, if a Chromatic is played on turn 1, if in order to optimize the chance of a turn 3 tron, there's no reason not to crack it on turn 2 regardless of what was drawn. Calculating the probabilities of the draws together requirers fewer calculations, but may be more complicated. In particular, when drawing only a single card, all of the events are mutually exclusive, so it's easy to calculate the probabilities, but when calculating probabilities for drawing multiple cards at once, we need to use a simulation. In cases where the probability has been calculated with a simulation, the probability is marked with an asterisk (*).
+Occasionally, multiple cards will be drawn in a row such that there's no reason to change decisions after the first card is drawn. For example, if a Chromatic is played on turn 1, if in order to optimize the chance of a turn 3 tron, there's no reason not to crack it on turn 2 regardless of what was drawn. Calculating the probabilities of the draws together requirers fewer calculations, but may be more complicated. In particular, when drawing only a single card, all of the events are mutually exclusive, so it's easy to calculate the probabilities, but when calculating probabilities for drawing multiple cards at once, we need to use a simulation. In cases where the probability has been calculated with a simulation, the probability is marked with an asterisk (\*).
 
 To organize these probabilities, we use a probability tree. The top of the tree represents the initial state. Each branching indicates drawing one or more cards. The branch is labeled with what card or cards were drawn and the chance of them being drawn. The box under the branch describes what play is made in the case that card was drawn. This may either lead to another branch, or may be the end, when no more plays can be made before turn 3.
 
