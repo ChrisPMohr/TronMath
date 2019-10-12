@@ -45,6 +45,8 @@ In short, the simulation code takes a starting deck with a certain number of cop
 
 We repeat these trials many times in order to improve the accuracy of the estimates.
 
+For the data currently in the spreadsheet, opening hands were simulated with 100 million trials, and draws within a hand were simulated with 10 million trials.
+
 #### Chance to Draw a Hand
 The events of drawing each of the hands are not mutually exclusive, so we will use a simulation. The order of preference for the hands is by chance to have turn 3 tron (described further below).
 
@@ -67,3 +69,13 @@ Every box is labeled with the number of cards left in the deck after the plays l
 The final box for every branch either is guaranteed to have turn 3 tron, or lists the final draws or cards looked at (from Ancient Stirrings) after every decision is made by the player and the chance to find the missing tron piece in the cards seen here.
 
 Based on this tree, we can determine the total chance to have turn 3 tron.
+
+### Frequently Asked Questions
+Your questions here!
+
+### Future Work
+* Try calculating probabilities entirely by simulation.
+* Calculate probabilities for best hands without two tron lands.
+* Calculate probabilities for decks with Once Upon a Time.
+* Figure out a calculation for keep/mulligan advice and add to the spreadsheet.
+* Make simulation code nicer.
