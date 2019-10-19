@@ -7,7 +7,10 @@ import logging
 logging.basicConfig(level=logging.INFO)
 # simulated_hands = {6} # This will cause simulation to only run for a subset of hands
 simulated_hands = None # This will run the simulation for all hands
-num_simul = 10000000 # looks like accuracy to 2 digits on success rate of hands
+num_simul = 100000000
+
+
+on_the_play = False
 
 def make_cards(dist):
     cards = []
@@ -23,7 +26,8 @@ CARD_NAMES = {
     4: "Chromatic",
     5: "Scrying",
     6: "Stirrings",
-    7: "Blank"
+    7: "Once Upon a Time",
+    8: "Blank"
 }
 
 TOWER = 0
@@ -33,12 +37,9 @@ MAP = 3
 CHROMATIC = 4
 SCRYING = 5
 STIRRINGS = 6
-# 0 1 2 Tower Power Plant Mine
-# 3 Map
-# 4 Chromatic
-# 5 Scrying
-# 6 Stirrings
-opening_card_dist = [4,4,4,4,8,4,4,28]
+ONCE = 7
+no_once_card_dist = [4,4,4,4,8,4,4,0,28]
+with_once_card_dist = [4,4,4,4,8,4,4,4,24]
 
 
 hand_size = 7
@@ -70,14 +71,15 @@ def main(hand_conditions, card_dist):
         total_counters[hand_index] += 1
 
     for i, condition in enumerate(hand_conditions):
-        print(
-            condition[0],
-            to_percent(float(total_counters[i]) / num_simul),
-            #made_tron_counters[i],
-            #total_counters[i])
-            to_percent(float(made_tron_counters[i]) / total_counters[i]) if total_counters[i] else 0,
-            total_counters[i])
-    print("Rest", float(rest_counter) / num_simul)
+        if total_counters[i]:
+            print(
+                "{:36} {:5.2f} {:6.2f} {:10}".format(
+                    condition[0],
+                    to_percent(float(total_counters[i]) / num_simul),
+                    to_percent(float(made_tron_counters[i]) / total_counters[i]) if total_counters[i] else 0,
+                    total_counters[i]
+                ))
+    print("{:36} {:5.2f}".format("Rest", to_percent(float(rest_counter) / num_simul)))
 
 
 def simulated_hand_has_tron(cards):
@@ -96,12 +98,15 @@ def simulated_hand_has_tron(cards):
         logging.debug("RULE: TRON - Have natural tron")
         return True
 
-    turn = 0
-    mana = 0
+    turn = 1 if on_the_play else 0
+    mana = turn
     green_mana = 0
     chrom_in_play = False
+    have_cast_once = False
     while True:
-        logging.debug("turn %d, mana %d, green_mana %d, chrom_in_play %r", turn, mana, green_mana, chrom_in_play)
+        logging.debug(
+            "turn %d, mana %d, green_mana %d, chrom_in_play %r, have_cast_once %r",
+            turn, mana, green_mana, chrom_in_play, have_cast_once)
         if is_xyz(hand_set, hand):
             logging.debug("RULE: TRON - Drew natural tron")
             return True
@@ -112,49 +117,71 @@ def simulated_hand_has_tron(cards):
             logging.debug("RULE: TRON - Have turn 1 map")
             return True
         elif mana >= 1 and green_mana >= 1 and SCRYING in hand_set:
-            logging.debug("RULE: TRON - Cast Scrying")
+            logging.debug("RULE: TRON - Played Scrying")
             return True
+        elif not have_cast_once and ONCE in hand_set:
+            logging.debug("RULE: Played Once Upon a Time 1")
+            have_cast_once = True
+            hand, hand_set = play_card(hand, ONCE)
+
+            once_cards = cards[next_card_index:next_card_index+5]
+            next_card_index += 5
+            if missing_land in once_cards:
+                logging.debug("RULE: TRON - Once Upon a Time hit tron")
+                return True
         elif chrom_in_play and (mana + green_mana) >= 1:
             logging.debug("RULE: Cracked Chromatic")
             chrom_in_play = False
-            if mana > 0:
-                mana -= 1
-                green_mana += 1
+            mana, green_mana = spend_mana(mana, green_mana, 1, 0)
 
+            green_mana += 1
             card = cards[next_card_index]
             next_card_index += 1
             hand.append(card)
             hand_set.add(card)
             logging.debug("DRAW: %s", CARD_NAMES[card])
+        elif have_cast_once and ONCE in hand_set and green_mana >= 1 and (mana + green_mana) >= 2 and not (CHROMATIC in hand_set and STIRRINGS in hand_set):
+            logging.debug("RULE: Played Once Upon a Time 2")
+            hand, hand_set = play_card(hand, ONCE)
+            mana, green_mana = spend_mana(mana, green_mana, 1, 1)
+
+            once_cards = cards[next_card_index:next_card_index+5]
+            next_card_index += 5
+            if missing_land in once_cards:
+                logging.debug("RULE: TRON - Once Upon a Time hit tron")
+                return True
         elif (mana + green_mana) >= 2 and CHROMATIC in hand_set:
             logging.debug("RULE: Played chromatic with spare mana")
+            mana, green_mana = spend_mana(mana, green_mana, 1, 0)
+            hand, hand_set = play_card(hand, CHROMATIC)
+
             chrom_in_play = True
-            if mana > 0:
-                mana -= 1
-            else:
-                green_mana -= 1
-            hand.remove(CHROMATIC)
-            hand_set = set(hand)
         elif green_mana == 1 and STIRRINGS in hand_set:
             logging.debug("RULE: Played stirrings")
-            green_mana -= 1
-            hand_set.remove(STIRRINGS)
-            # skipping this as an optimization
-            # hand.remove(STIRRINGS)
+            mana, green_mana = spend_mana(mana, green_mana, 0, 1)
+            hand, hand_set = play_card(hand, STIRRINGS)
+
             stirrings_cards = cards[next_card_index:next_card_index+5]
             next_card_index += 5
             if missing_land in stirrings_cards:
                 logging.debug("RULE: TRON - Stirrings hit tron")
                 return True
+        elif have_cast_once and ONCE in hand_set and green_mana >= 1 and (mana + green_mana) >= 2:
+            logging.debug("RULE: Played Once Upon a Time 3")
+            hand, hand_set = play_card(hand, ONCE)
+            mana, green_mana = spend_mana(mana, green_mana, 1, 1)
+
+            once_cards = cards[next_card_index:next_card_index+5]
+            next_card_index += 5
+            if missing_land in once_cards:
+                logging.debug("RULE: TRON - Once Upon a Time hit tron")
+                return True
         elif (mana + green_mana) >= 1 and CHROMATIC in hand_set:
             logging.debug("RULE: Played chromatic without spare mana")
+            mana, green_mana = spend_mana(mana, green_mana, 1, 0)
+            hand, hand_set = play_card(hand, CHROMATIC)
+
             chrom_in_play = True
-            if mana > 0:
-                mana -= 1
-            else:
-                green_mana -= 1
-            hand.remove(CHROMATIC)
-            hand_set = set(hand)
         else:
             logging.debug("RULE: Finished turn")
             turn += 1
@@ -166,6 +193,21 @@ def simulated_hand_has_tron(cards):
             hand.append(card)
             hand_set.add(card)
             logging.debug("DRAW: %s", CARD_NAMES[card])
+
+
+def spend_mana(current_colorless, current_green, cost_colorless, cost_green):
+    colorless_spent = min(current_colorless, cost_colorless)
+    current_colorless -= colorless_spent
+    if colorless_spent < cost_colorless:
+        current_green -= (cost_colorless - colorless_spent)
+    current_green -= cost_green
+    return current_colorless, current_green
+
+
+def play_card(hand, card):
+    hand.remove(card)
+    hand_set = set(hand)
+    return hand, hand_set
 
 
 def is_xyz(hand, hand_mul):
@@ -201,22 +243,59 @@ def is_xy_scry(hand, hand_mul):
 def is_xy_scry_stir(hand, hand_mul):
     return is_xy(hand, hand_mul) and SCRYING in hand and STIRRINGS in hand
 
-def has_anything(hand, hand_mul):
-    return 3 in hand or 4 in hand or 5 in hand or 6 in hand
+# hands with once upon a time
+def is_xy_chrom_stir_once(hand, hand_mul):
+    return is_xy(hand, hand_mul) and CHROMATIC in hand and STIRRINGS in hand and ONCE in hand
 
-def is_xy_and_has_anything(hand, hand_mul):
-    return is_xy(hand, hand_mul)  and has_anything(hand, hand_mul)
+def is_xy_chrom_chrom_once_once(hand, hand_mul):
+    return is_xy(hand, hand_mul) and hand_mul.count(CHROMATIC) >= 2 and hand_mul.count(ONCE) >= 2
+
+def is_xy_chrom_chrom_once(hand, hand_mul):
+    return is_xy(hand, hand_mul) and hand_mul.count(CHROMATIC) >= 2 and ONCE in hand
+
+def is_xy_chrom_chrom_stir_once(hand, hand_mul):
+    return is_xy(hand, hand_mul) and hand_mul.count(CHROMATIC) >= 2 and STIRRINGS in hand and ONCE in hand
+
+def is_xy_chrom_once_once(hand, hand_mul):
+    return is_xy(hand, hand_mul) and CHROMATIC in hand and hand_mul.count(ONCE) >= 2
+
+def is_xy_chrom_once(hand, hand_mul):
+    return is_xy(hand, hand_mul) and CHROMATIC in hand and ONCE in hand
+
+def is_xy_stir_once(hand, hand_mul):
+    return is_xy(hand, hand_mul) and STIRRINGS in hand and ONCE in hand
+
+def is_xy_scry_once(hand, hand_mul):
+    return is_xy(hand, hand_mul) and SCRYING in hand and ONCE in hand
+
+def is_xy_scry_stir_once(hand, hand_mul):
+    return is_xy(hand, hand_mul) and SCRYING in hand and STIRRINGS in hand and ONCE in hand
+
+def is_xy_once_once(hand, hand_mul):
+    return is_xy(hand, hand_mul) and hand_mul.count(ONCE) >= 2
+
+def is_xy_once(hand, hand_mul):
+    return is_xy(hand, hand_mul) and ONCE in hand
+
 
 on_the_play_conditions = [
     ("XYZ", is_xyz),
     ("XY + Map", is_xy_map),
     ("XY + Chrom + Scry", is_xy_chrom_scry),
+    ("XY + Chrom + Chrom + Stir + Once", is_xy_chrom_chrom_stir_once),
+    ("XY + Chrom + Stir + Once", is_xy_chrom_stir_once),
+    ("XY + Chrom + Chrom + Once + Once", is_xy_chrom_chrom_once_once),
+    ("XY + Chrom + Once + Once", is_xy_chrom_once_once),
+    ("XY + Chrom + Chrom + Once", is_xy_chrom_chrom_once),
     ("XY + Chrom + Chrom + Stir", is_xy_chrom_chrom_stir),
+    ("XY + Chrom + Once", is_xy_chrom_once),
     ("XY + Chrom + Stir", is_xy_chrom_stir),
     ("XY + Chrom + Chrom", is_xy_chrom_chrom),
+    ("XY + Stir + Once", is_xy_stir_once),
+    ("XY + Once + Once", is_xy_once_once),
+    ("XY + Once", is_xy_once),
     ("XY + Chrom", is_xy_chrom),
     ("XY + Stir", is_xy_stir),
-    ("XY + Scry", is_xy_scry),
     ("XY", is_xy)
 ]
 
@@ -224,11 +303,22 @@ on_the_draw_conditions = [
     ("XYZ", is_xyz),
     ("XY + Map", is_xy_map),
     ("XY + Chrom + Scry", is_xy_chrom_scry),
+    ("XY + Chrom + Chrom + Stir + Once", is_xy_chrom_chrom_stir_once),
+    ("XY + Chrom + Stir + Once", is_xy_chrom_stir_once),
+    ("XY + Chrom + Chrom + Once + Once", is_xy_chrom_chrom_once_once),
+    ("XY + Chrom + Once + Once", is_xy_chrom_once_once),
+    ("XY + Chrom + Chrom + Once", is_xy_chrom_chrom_once),
     ("XY + Chrom + Chrom + Stir", is_xy_chrom_chrom_stir),
+    ("XY + Chrom + Once", is_xy_chrom_once),
     ("XY + Chrom + Stir", is_xy_chrom_stir),
     ("XY + Chrom + Chrom", is_xy_chrom_chrom),
+    ("XY + Scry + Once", is_xy_scry_once),
     ("XY + Chrom", is_xy_chrom),
+    ("XY + Stir + Once", is_xy_stir_once),
+    ("XY + Once + Once", is_xy_once_once),
+    ("XY + Scry + Stir + Once", is_xy_scry_stir_once),
     ("XY + Scry + Stir", is_xy_scry_stir),
+    ("XY + Once", is_xy_once),
     ("XY + Scry", is_xy_scry),
     ("XY + Stir", is_xy_stir),
     ("XY", is_xy)
@@ -237,5 +327,7 @@ on_the_draw_conditions = [
 
 if __name__ == '__main__':
     start_time = time.time()
-    main(on_the_draw_conditions, opening_card_dist)
+    main(
+        on_the_play_conditions if on_the_play else on_the_draw_conditions,
+        with_once_card_dist)
     print(time.time() - start_time)
