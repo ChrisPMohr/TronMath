@@ -50,6 +50,8 @@ def to_percent(f):
 
 
 def main(hand_conditions, card_dist):
+    if sum(card_dist) != 60:
+        raise ValueError("Decklist doesn't have 60 cards")
     cards = make_cards(card_dist)
     made_tron_counters = [0] * (len(hand_conditions))
     total_counters = [0] * (len(hand_conditions))
@@ -102,11 +104,11 @@ def simulated_hand_has_tron(cards):
     mana = turn
     green_mana = 0
     chrom_in_play = False
-    have_cast_once = False
+    have_cast_spell = False
     while True:
         logging.debug(
-            "turn %d, mana %d, green_mana %d, chrom_in_play %r, have_cast_once %r",
-            turn, mana, green_mana, chrom_in_play, have_cast_once)
+            "turn %d, mana %d, green_mana %d, chrom_in_play %r, have_cast_spell %r",
+            turn, mana, green_mana, chrom_in_play, have_cast_spell)
         if is_xyz(hand_set, hand):
             logging.debug("RULE: TRON - Drew natural tron")
             return True
@@ -119,10 +121,10 @@ def simulated_hand_has_tron(cards):
         elif mana >= 1 and green_mana >= 1 and SCRYING in hand_set:
             logging.debug("RULE: TRON - Played Scrying")
             return True
-        elif not have_cast_once and ONCE in hand_set:
+        elif not have_cast_spell and ONCE in hand_set:
             logging.debug("RULE: Played Once Upon a Time 1")
-            have_cast_once = True
             hand, hand_set = play_card(hand, ONCE)
+            have_cast_spell = True
 
             once_cards = cards[next_card_index:next_card_index+5]
             next_card_index += 5
@@ -140,10 +142,11 @@ def simulated_hand_has_tron(cards):
             hand.append(card)
             hand_set.add(card)
             logging.debug("DRAW: %s", CARD_NAMES[card])
-        elif have_cast_once and ONCE in hand_set and green_mana >= 1 and (mana + green_mana) >= 2 and not (CHROMATIC in hand_set and STIRRINGS in hand_set):
+        elif have_cast_spell and ONCE in hand_set and green_mana >= 1 and (mana + green_mana) >= 2 and not (CHROMATIC in hand_set and STIRRINGS in hand_set):
             logging.debug("RULE: Played Once Upon a Time 2")
             hand, hand_set = play_card(hand, ONCE)
             mana, green_mana = spend_mana(mana, green_mana, 1, 1)
+            have_cast_spell = True
 
             once_cards = cards[next_card_index:next_card_index+5]
             next_card_index += 5
@@ -154,22 +157,25 @@ def simulated_hand_has_tron(cards):
             logging.debug("RULE: Played chromatic with spare mana")
             mana, green_mana = spend_mana(mana, green_mana, 1, 0)
             hand, hand_set = play_card(hand, CHROMATIC)
+            have_cast_spell = True
 
             chrom_in_play = True
         elif green_mana == 1 and STIRRINGS in hand_set:
             logging.debug("RULE: Played stirrings")
             mana, green_mana = spend_mana(mana, green_mana, 0, 1)
             hand, hand_set = play_card(hand, STIRRINGS)
+            have_cast_spell = True
 
             stirrings_cards = cards[next_card_index:next_card_index+5]
             next_card_index += 5
             if missing_land in stirrings_cards:
                 logging.debug("RULE: TRON - Stirrings hit tron")
                 return True
-        elif have_cast_once and ONCE in hand_set and green_mana >= 1 and (mana + green_mana) >= 2:
+        elif have_cast_spell and ONCE in hand_set and green_mana >= 1 and (mana + green_mana) >= 2:
             logging.debug("RULE: Played Once Upon a Time 3")
             hand, hand_set = play_card(hand, ONCE)
             mana, green_mana = spend_mana(mana, green_mana, 1, 1)
+            have_cast_spell = True
 
             once_cards = cards[next_card_index:next_card_index+5]
             next_card_index += 5
@@ -180,6 +186,7 @@ def simulated_hand_has_tron(cards):
             logging.debug("RULE: Played chromatic without spare mana")
             mana, green_mana = spend_mana(mana, green_mana, 1, 0)
             hand, hand_set = play_card(hand, CHROMATIC)
+            have_cast_spell = True
 
             chrom_in_play = True
         else:

@@ -22,7 +22,7 @@ There aren't too many cards that can be cast on turns 1 and 2 in a traditional M
 * A turn 2 Sylvan Scrying combined with a Chromatic Sphere or Chromatic Star (from here on in, just a "Chromatic"), guarantees turn 3 tron. We don't distinguish the two cards because it's irrelevant to these calculations.
 * One Ancient Stirrings can be cast on turn 2 when combined with a Chromatic to dig 5 cards.
 * Two Chromatics can be played and activated (one on turn 1, one on turn 2) to draw a card and possibly allow casting Sylvan Scrying or Ancient Stirrings.
-* One copy of Once Upon a Time can be cast for free. Another copy can be cast on turn 2 when combined with a Chromatic.
+* One copy of Once Upon a Time can be cast for free as the first spell of the game. Another copy can be cast on turn 2 when combined with a Chromatic.
 
 There are several versions of spreadsheets to for different decklists containing different mixes of these cards.
 
